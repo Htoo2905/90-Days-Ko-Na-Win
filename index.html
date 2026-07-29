@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ကိုးနဝင်း အဓိဋ္ဌာန် (Smart Auto-Sorting)</title>
+<style>
+  :root {
+    --bg-base: #1A0B0E; 
+    --glass-bg: rgba(70, 20, 30, 0.4);
+    --glass-border: rgba(229, 183, 107, 0.35);
+    --gold-main: #E5B76B;
+    --gold-bright: #FFD700;
+    --gold-glow: rgba(229, 183, 107, 0.4);
+    --text-main: #FDF6E3;
+    --text-muted: #D4B895;
+    --success-green: #34C759;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    padding: 25px 15px 50px 15px;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  .bg-orb-1 { position: fixed; top: -50px; left: -50px; width: 250px; height: 250px; background: rgba(229, 183, 107, 0.15); border-radius: 50%; filter: blur(60px); z-index: -1; }
+  .bg-orb-2 { position: fixed; bottom: 100px; right: -50px; width: 300px; height: 300px; background: rgba(150, 20, 40, 0.2); border-radius: 50%; filter: blur(80px); z-index: -1; }
+
+  .header { text-align: center; margin-bottom: 25px; }
+  .header h1 { font-size: 24px; font-weight: 700; color: var(--gold-bright); margin: 0 0 5px 0; letter-spacing: 0.5px; text-shadow: 0 0 15px var(--gold-glow); }
+  .header p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 22px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--gold-main);
+    margin: 0 0 18px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(229, 183, 107, 0.2);
+    padding-bottom: 12px;
+    letter-spacing: 1px;
+  }
+
+  .today-box { text-align: center; }
+  .today-stage {
+    display: inline-block;
+    background: rgba(229, 183, 107, 0.15);
+    border: 1px solid rgba(229, 183, 107, 0.4);
+    color: var(--gold-main);
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 15px;
+  }
+  .today-title { font-size: 22px; font-weight: bold; color: var(--text-main); margin-bottom: 15px; }
+
+  .chant-list {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: left;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 15px;
+    line-height: 2;
+    color: var(--text-main);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .chant-item span { color: var(--gold-main); font-weight: bold; margin-right: 8px;}
+
+  .rounds-container { margin-top: 25px; }
+  .rounds-title { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; text-align: center; }
+  .beads-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; justify-items: center; max-width: 180px; margin: 0 auto; }
+
+  .bead {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(20, 5, 10, 0.6);
+    border: 1.5px solid var(--glass-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: bold; color: var(--text-muted);
+    cursor: pointer; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .bead.active {
+    background: linear-gradient(135deg, var(--gold-bright), #D4AF37);
+    color: #000; border-color: #FFF;
+    box-shadow: 0 4px 15px var(--gold-glow), inset 0 -2px 5px rgba(0,0,0,0.2);
+    transform: scale(1.1);
+  }
+
+  .reset-btn {
+    margin-top: 20px; background: rgba(255,255,255,0.05); color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px;
+    font-size: 13px; cursor: pointer; transition: all 0.2s;
+  }
+  .reset-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+
+  /* Stage Groups */
+  .stage-box {
+    background: rgba(0, 0, 0, 0.2); border-radius: 16px;
+    padding: 15px; margin-bottom: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: fadeIn 0.4s ease-in-out;
+  }
+  
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .stage-title {
+    font-size: 14px; margin-bottom: 15px; font-weight: 600; text-align: left;
+    border-bottom: 1px dashed rgba(229, 183, 107, 0.3); padding-bottom: 10px; line-height: 1.5;
+  }
+  .stage-title.completed { color: #506757; }
+  .stage-title.active { color: var(--gold-main); }
+
+  .stage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  
+  .day-btn {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .day-btn:active { transform: scale(0.9); }
+  .day-btn.done {
+    background: linear-gradient(135deg, #34C759, #248A3D);
+    border-color: #40D465; color: #FFF;
+    box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4); font-size: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-orb-1"></div>
+<div class="bg-orb-2"></div>
+
+<div class="header">
+  <h1>ကိုးနဝင်း အဓိဋ္ဌာန်</h1>
+  <p>ရက်ပေါင်း ၉၀ တရားဘာဝနာ မှတ်တမ်း</p>
+</div>
+
+<!-- Dynamic Chant Header -->
+<div class="glass-card">
+  <div class="card-title">
+    <span>ယနေ့ ရွတ်ဆိုရမည့် ဂုဏ်တော်</span>
+    <span id="dayLabel">Day 1</span>
+  </div>
+  <div id="todayChant" class="today-box"></div>
+  <div class="rounds-container">
+    <div class="rounds-title">ယနေ့ ပတ်ရေ မှတ်တိုင် (၉ ပတ်)</div>
+    <div class="beads-grid" id="beadsGrid"></div>
+    <div style="text-align: center;"><button class="reset-btn" onclick="resetRounds()">ပတ်ရေ ပြန်စမည်</button></div>
+  </div>
+</div>
+
+<!-- Tracker Grid with Smart Auto-Sorting -->
+<div class="glass-card">
+  <div class="card-title">
+    <span>ရက် ၉၀ ပြီးမြောက်မှု ဇယား</span>
+    <span id="percentText">0%</span>
+  </div>
+  <div id="daysGridContainer"></div>
+</div>
+
+<script>
+  const nineAttributesHTML = `
+    <div class="chant-list">
+      <div class="chant-item"><span>၁။</span> အရဟံ</div>
+      <div class="chant-item"><span>၂။</span> သမ္မာသမ္ဗုဒ္ဓေါ</div>
+      <div class="chant-item"><span>၃။</span> ဝိဇ္ဇာစရဏသမ္ပန္နော</div>
+      <div class="chant-item"><span>၄။</span> သုဂတော</div>
+      <div class="chant-item"><span>၅။</span> လောကဝိဒူ</div>
+      <div class="chant-item"><span>၆။</span> အနုတ္တရော ပုရိသဒမ္မသာရထိ</div>
+      <div class="chant-item"><span>၇။</span> သတ္ထာဒေဝမနုဿာနံ</div>
+      <div class="chant-item"><span>၈။</span> ဗုဒ္ဓေါ</div>
+      <div class="chant-item"><span>၉။</span> ဘဂဝါ</div>
+    </div>
+  `;
+
+  const scheduleData = [
+    { period: "၁", dates: "၂၉.၇.၂၀၂၆ - ၆.၈.၂၀၂၆", title: "ဂုဏ်တော် (၉) ပါးလုံး", detail: nineAttributesHTML },
+    { period: "၂", dates: "၇.၈.၂၀၂၆ - ၁၅.၈.၂၀၂၆", title: "အရဟံ သိဒ္ဓိ" },
+    { period: "၃", dates: "၁၆.၈.၂၀၂၆ - ၂၄.၈.၂၀၂၆", title: "သမ္မာသမ္ဗုဒ္ဓေါ သိဒ္ဓိ" },
+    { period: "၄", dates: "၂၅.၈.၂၀၂၆ - ၂.၉.၂၀၂၆", title: "ဝိဇ္ဇာစရဏသမ္ပန္နော သိဒ္ဓိ" },
+    { period: "၅", dates: "၃.၉.၂၀၂၆ - ၁၁.၉.၂၀၂၆", title: "သုဂတော သိဒ္ဓိ" },
+    { period: "၆", dates: "၁၂.၉.၂၀၂၆ - ၂၀.၉.၂၀၂၆", title: "လောကဝိဒူ သိဒ္ဓိ" },
+    { period: "၇", dates: "၂၁.၉.၂၀၂၆ - ၂۹.၉.၂၀၂၆", title: "အနုတ္တရော ပုရိသဒမ္မသာရထိ သိဒ္ဓိ" },
+    { period: "၈", dates: "၃၀.၉.၂၀၂၆ - ၈.၁၀.၂၀၂၆", title: "သတ္ထာဒေဝမနုဿာနံ သိဒ္ဓိ" },
+    { period: "၉", dates: "၉.၁၀.၂၀၂၆ - ၁၇.၁၀.၂၀၂၆", title: "ဗုဒ္ဓေါ သိဒ္ဓိ" },
+    { period: "၁၀", dates: "၁၈.၁၀.၂၀၂၆ - ၂၆.၁၀.၂၀၂၆", title: "ဘဂဝါ သိဒ္ဓိ" }
+  ];
+
+  let days = localStorage.getItem('adhihtanDaysV7') ? JSON.parse(localStorage.getItem('adhihtanDaysV7')) : Array(90).fill(false);
+  let currentRound = localStorage.getItem('koenawinRoundV7') ? parseInt(localStorage.getItem('koenawinRoundV7')) : 0;
+  
+  const container = document.getElementById('daysGridContainer');
+  const beadsGrid = document.getElementById('beadsGrid');
+
+  function renderBeads() {
+    beadsGrid.innerHTML = '';
+    for(let i=1; i<=9; i++) {
+      let bead = document.createElement('div');
+      bead.className = 'bead ' + (i <= currentRound ? 'active' : '');
+      bead.innerText = i;
+      bead.onclick = function() {
+        currentRound = (currentRound === i) ? i - 1 : i;
+        localStorage.setItem('koenawinRoundV7', currentRound);
+        renderBeads();
+      };
+      beadsGrid.appendChild(bead);
+    }
+  }
+
+  function resetRounds() {
+    currentRound = 0; localStorage.setItem('koenawinRoundV7', currentRound); renderBeads();
+  }
+
+  function updateUI() {
+    container.innerHTML = '';
+    let completedCount = 0;
+    
+    // Count total days completed
+    for(let i=0; i<90; i++) { if(days[i]) completedCount++; }
+
+    // Check completion status of each 9-day stage
+    let stageCompletion = [];
+    for(let s = 0; s < 10; s++) {
+      let isCompleted = true;
+      for(let d = 0; d < 9; d++) {
+        if(!days[s * 9 + d]) { isCompleted = false; break; }
+      }
+      stageCompletion[s] = isCompleted;
+    }
+
+    // Sort Stages: Incomplete ones stay on top, completed ones move to bottom
+    let stageIndices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    stageIndices.sort((a, b) => {
+      if (stageCompletion[a] === stageCompletion[b]) return a - b; 
+      return stageCompletion[a] ? 1 : -1; // Completed goes down (+1)
+    });
+
+    // Build Stages based on sorted order
+    stageIndices.forEach(s => {
+      let stageDiv = document.createElement('div');
+      stageDiv.className = 'stage-box';
+
+      let stageTitle = document.createElement('div');
+      stageTitle.className = 'stage-title ' + (stageCompletion[s] ? 'completed' : 'active');
+      let checkMark = stageCompletion[s] ? ' <span style="color:var(--success-green); font-weight:bold;">(ပြီးမြောက်) ✓</span>' : '';
+      
+      stageTitle.innerHTML = `အဆင့် (${scheduleData[s].period}) - ${scheduleData[s].title}${checkMark} <br> <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">[ ${scheduleData[s].dates} ]</span>`;
+      stageDiv.appendChild(stageTitle);
+
+      let stageGrid = document.createElement('div');
+      stageGrid.className = 'stage-grid';
+
+      for(let i = 0; i < 9; i++) {
+        let currentDay = (s * 9) + i;
+        let btn = document.createElement('div');
+        btn.className = 'day-btn ' + (days[currentDay] ? 'done' : '');
+        btn.innerText = days[currentDay] ? '✓' : (currentDay + 1);
+        
+        btn.onclick = function() {
+          days[currentDay] = !days[currentDay];
+          localStorage.setItem('adhihtanDaysV7', JSON.stringify(days));
+          if(days[currentDay] === true) {
+             currentRound = 0; localStorage.setItem('koenawinRoundV7', 0);
+          }
+          updateUI();
+        };
+        stageGrid.appendChild(btn);
+      }
+      stageDiv.appendChild(stageGrid);
+      container.appendChild(stageDiv);
+    });
+
+    let pct = Math.round((completedCount / 90) * 100);
+    document.getElementById('percentText').innerText = pct + '% (' + completedCount + '/90)';
+
+    let highlightDayIndex = completedCount >= 90 ? 89 : completedCount;
+    let highlightPeriodIndex = Math.floor(highlightDayIndex / 9);
+    let currentPeriod = scheduleData[highlightPeriodIndex];
+
+    document.getElementById('dayLabel').innerText = 'ရက်မြောက် - ' + (highlightDayIndex + 1);
+    let detailHTML = currentPeriod.detail ? currentPeriod.detail : '';
+
+    document.getElementById('todayChant').innerHTML = `
+      <div class="today-stage">အဆင့် ${currentPeriod.period} (${currentPeriod.dates})</div>
+      <div class="today-title">${currentPeriod.title}</div>
+      ${detailHTML}
+    `;
+    
+    renderBeads();
+  }
+
+  updateUI();
+</script>
+</body>
+</html>
